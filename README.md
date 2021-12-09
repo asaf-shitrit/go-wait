@@ -1,4 +1,5 @@
 # go-wait
+[![Tests](https://github.com/asaf-shitrit/go-wait/actions/workflows/run-tests.yml/badge.svg)](https://github.com/asaf-shitrit/go-wait/actions/workflows/run-tests.yml)
 
 A tiny util library for programs that require a little patience ⏰
 
