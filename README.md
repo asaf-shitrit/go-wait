@@ -37,3 +37,8 @@ if err := wait.Until(ctx, checkFunc, options); err != nil {
 
 // logic that should happen after check is satisfied
 ```
+
+### Options
+##### Jitter
+Allows you to set an amount of jitter percentage that will apply
+for the calculation of each interval.
