@@ -17,17 +17,17 @@ var (
 )
 
 type UntilOptions struct {
-	interval time.Duration
-	jitter            int
+	Interval time.Duration
+	Jitter            int
 }
 
 func (o *UntilOptions) jitterDefined() bool {
-	return o.jitter != -1 && o.jitter != 0
+	return o.Jitter != -1 && o.Jitter != 0
 }
 
 var defaultUntilOptions = &UntilOptions{
-	interval: time.Millisecond * 100,
-	jitter:   0,
+	Interval: time.Millisecond * 100,
+	Jitter:   0,
 }
 
 // Until allows for a predictable interval based waiting mechanism until
@@ -40,9 +40,9 @@ func Until(ctx context.Context, check func() (bool, error), o ...*UntilOptions) 
 
 	calculateNextInterval := func() time.Duration {
 		if !options.jitterDefined() {
-			return options.interval
+			return options.Interval
 		}
-		return jitterDuration(options.interval, options.jitter)
+		return jitterDuration(options.Interval, options.Jitter)
 	}
 
 	t := time.NewTimer(calculateNextInterval())
@@ -65,20 +65,20 @@ func Until(ctx context.Context, check func() (bool, error), o ...*UntilOptions) 
 }
 
 type BackoffOptions struct {
-	jitter                  int
-	baselineDuration, limit time.Duration
-	multiplier              int64
+	Jitter                  int
+	BaselineDuration, Limit time.Duration
+	Multiplier              int64
 }
 
 func (o * BackoffOptions) jitterDefined() bool {
-	return o.jitter != -1 && o.jitter != 0
+	return o.Jitter != -1 && o.Jitter != 0
 }
 
 var defaultBackoffOptions = &BackoffOptions{
-	baselineDuration: time.Millisecond,
-	limit:            500 * time.Millisecond,
-	multiplier:       2,
-	jitter:           0,
+	BaselineDuration: time.Millisecond,
+	Limit:            500 * time.Millisecond,
+	Multiplier:       2,
+	Jitter:           0,
 }
 
 // Backoff is a waiting mechanism that allows for better CPU load as the interval
@@ -95,19 +95,19 @@ func Backoff(ctx context.Context, check func() (bool, error), o ...*BackoffOptio
 	}
 
 	// make sure limit is greater then the given duration
-	if options.limit < options.baselineDuration {
+	if options.Limit < options.BaselineDuration {
 		return invalidBackoffLimitErr
 	}
 
-	duration := options.baselineDuration
+	duration := options.BaselineDuration
 	t := time.NewTimer(duration)
 
 	calcNewDuration := func(previous time.Duration) time.Duration {
-		d := time.Duration(int64(previous) * int64(options.multiplier))
+		d := time.Duration(int64(previous) * int64(options.Multiplier))
 		if !options.jitterDefined() {
 			return d
 		}
-		return jitterDuration(d, options.jitter)
+		return jitterDuration(d, options.Jitter)
 	}
 
 	for {
@@ -125,11 +125,11 @@ func Backoff(ctx context.Context, check func() (bool, error), o ...*BackoffOptio
 				return nil
 			}
 
-			if duration < options.limit {
+			if duration < options.Limit {
 				duration = calcNewDuration(duration)
 			} else {
 				// we cap the timer duration to the limit
-				duration = options.limit
+				duration = options.Limit
 			}
 			t.Reset(duration)
 		}

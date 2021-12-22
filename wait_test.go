@@ -47,8 +47,8 @@ func TestUntil(t *testing.T) {
 	t.Run("jitter should produce non-repeating interval check times", func(t *testing.T) {
 		t.Parallel()
 		options := &UntilOptions{
-			interval: time.Millisecond * 500,
-			jitter:   10, //10% of jitter in this case
+			Interval: time.Millisecond * 500,
+			Jitter:   10, //10% of jitter in this case
 		}
 
 		value := false
@@ -75,7 +75,7 @@ func TestUntil(t *testing.T) {
 		checkIntervals := calcCheckTimesDelta(checkTimes)
 		didAnyIntervalJitter := false
 		for _, interval := range checkIntervals {
-			if interval != options.interval {
+			if interval != options.Interval {
 				didAnyIntervalJitter = true
 			}
 		}
@@ -86,7 +86,7 @@ func TestUntil(t *testing.T) {
 	t.Run("should timeout", func(t *testing.T) {
 		t.Parallel()
 		options := &UntilOptions{
-			interval: defaultUntilOptions.interval,
+			Interval: defaultUntilOptions.Interval,
 		}
 		returnFunc := func() (bool, error) {
 			return false, nil
@@ -167,8 +167,8 @@ func TestBackoff(t *testing.T){
 			checkTimes = append(checkTimes, time.Now())
 			return false, nil
 		}, &BackoffOptions{
-			baselineDuration: time.Millisecond*100,
-			limit: expectedMaxInterval,
+			BaselineDuration: time.Millisecond*100,
+			Limit: expectedMaxInterval,
 		})
 
 		assert.NotNil(t, err)
