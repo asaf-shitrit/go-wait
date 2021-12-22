@@ -7,54 +7,48 @@ import (
 	"time"
 )
 
-type Options struct {
-	interval time.Duration
-	timeout time.Duration
-	jitter int
-}
-
-var defaultOptions = &Options{
-	interval: time.Millisecond*100,
-	timeout: time.Second*10,
-	jitter: 0,
-}
-
-func init(){
+func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-var ctxErr = errors.New("the operation was either canceled or had a timeout")
+var (
+	canceledErr            = errors.New("the operation was canceled")
+	invalidBackoffLimitErr = errors.New("the provided backoff limit is lower then the baseline")
+)
 
-func Until(ctx context.Context, check func () (bool, error), o ...*Options) error {
-	options := defaultOptions
+type UntilOptions struct {
+	interval time.Duration
+	jitter            int
+}
+
+func (o *UntilOptions) jitterDefined() bool {
+	return o.jitter != -1 && o.jitter != 0
+}
+
+var defaultUntilOptions = &UntilOptions{
+	interval: time.Millisecond * 100,
+	jitter:   0,
+}
+
+// Until allows for a predictable interval based waiting mechanism until
+// the given bool based check is satisfied. 
+func Until(ctx context.Context, check func() (bool, error), o ...*UntilOptions) error {
+	options := defaultUntilOptions
 	if len(o) != 0 {
 		options = o[0]
 	}
 
-	tCtx, cancel := context.WithTimeout(ctx, options.timeout)
-	defer cancel()
-
-	// we pre-calculate the jitter offset to reduce
-	// overhead in each run of calculateNextInterval
-	var maxTimeJitter int64
-	if options.jitter != 0 {
-		maxTimeJitter = int64(int64(options.interval)/int64(options.jitter))
-	}
-
-	calculateNextInterval := func () time.Duration  {
-		if options.jitter == 0 {
+	calculateNextInterval := func() time.Duration {
+		if !options.jitterDefined() {
 			return options.interval
 		}
-		// we want to jitter to be in the range of 
-		// [interval - jitter] ~ [interval + jitter]
-		timeJitter := time.Duration(rand.Int63n(maxTimeJitter*2)-maxTimeJitter)
-		return options.interval + timeJitter
+		return jitterDuration(options.interval, options.jitter)
 	}
 
 	t := time.NewTimer(calculateNextInterval())
 	for {
 		select {
-		case <- t.C:
+		case <-t.C:
 			res, err := check()
 			if err != nil {
 				return err
@@ -64,8 +58,80 @@ func Until(ctx context.Context, check func () (bool, error), o ...*Options) erro
 				continue
 			}
 			return nil
-		case <- tCtx.Done():
-			return ctxErr
+		case <-ctx.Done():
+			return canceledErr
+		}
+	}
+}
+
+type BackoffOptions struct {
+	jitter                  int
+	baselineDuration, limit time.Duration
+	multiplier              int64
+}
+
+func (o * BackoffOptions) jitterDefined() bool {
+	return o.jitter != -1 && o.jitter != 0
+}
+
+var defaultBackoffOptions = &BackoffOptions{
+	baselineDuration: time.Millisecond,
+	limit:            500 * time.Millisecond,
+	multiplier:       2,
+	jitter:           0,
+}
+
+// Backoff is a waiting mechanism that allows for better CPU load as the interval
+// starts from a given baseline and then backs off until it reaches the provided
+// limit.
+//
+// Note: this is partially bases off of http.Server implementation of their
+// Shutdown polling mechanism.
+func Backoff(ctx context.Context, check func() (bool, error), o ...*BackoffOptions) error {
+
+	options := defaultBackoffOptions
+	if len(o) != 0 {
+		options = o[0]
+	}
+
+	// make sure limit is greater then the given duration
+	if options.limit < options.baselineDuration {
+		return invalidBackoffLimitErr
+	}
+
+	duration := options.baselineDuration
+	t := time.NewTimer(duration)
+
+	calcNewDuration := func(previous time.Duration) time.Duration {
+		d := time.Duration(int64(previous) * int64(options.multiplier))
+		if !options.jitterDefined() {
+			return d
+		}
+		return jitterDuration(d, options.jitter)
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return canceledErr
+		case <-t.C:
+
+			res, err := check()
+			if err != nil {
+				return err
+			}
+
+			if res {
+				return nil
+			}
+
+			if duration < options.limit {
+				duration = calcNewDuration(duration)
+			} else {
+				// we cap the timer duration to the limit
+				duration = options.limit
+			}
+			t.Reset(duration)
 		}
 	}
 }
