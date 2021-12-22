@@ -9,6 +9,10 @@ Useful for simple cases where a predictable `bool` check should be ran
 in a set interval and continue when it is satisfied.
 #### Basic usage
 ```go
+import (
+	wait "github.com/asaf-shitrit/go-wait"
+)
+
 checkFunc := func() (bool, error) {
     // any bool based logic that changes over a 
     // given period of time
@@ -23,14 +27,18 @@ if err := wait.Until(ctx, checkFunc); err != nil {
 ```
 #### With explicit options
 ```go
+import (
+	wait "github.com/asaf-shitrit/go-wait"
+)
+
 checkFunc := func() (bool, error) {
     // any bool based logic that changes over a 
     // given period of time
 }
 
 options := &wait.UntilOptions{
-    timeout: time.Minute
-    interval: time.Second
+    Timeout: time.Minute
+    Interval: time.Second
 }
 
 ctx := context.Background() // or pass any ctx you would like
@@ -49,6 +57,10 @@ It was inspired by Go's own `http.Server` `Shutdown` implementation ❤️
 
 #### Basic usage
 ```go
+import (
+	wait "github.com/asaf-shitrit/go-wait"
+)
+
 checkFunc := func() (bool, error) {
     // any bool based logic that changes over a 
     // given period of time
@@ -64,15 +76,19 @@ if err := wait.Backoff(ctx, checkFunc); err != nil {
 
 #### With explicit options
 ```go
+import (
+	wait "github.com/asaf-shitrit/go-wait"
+)
+
 checkFunc := func() (bool, error) {
     // any bool based logic that changes over a 
     // given period of time
 }
 
 options := &wait.BackoffOptions{
-	baselineDuration: time.Millisecond,
-	limit:            500 * time.Millisecond,
-	multiplier:       2,
+	BaselineDuration: time.Millisecond,
+	Limit:            500 * time.Millisecond,
+	Multiplier:       2,
 }
 
 ctx := context.Background() // or pass any ctx you would like
