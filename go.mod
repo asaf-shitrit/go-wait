@@ -1,4 +1,4 @@
-module github.com/go-wait
+module github.com/asaf-shitrit/go-wait
 
 go 1.17
 
